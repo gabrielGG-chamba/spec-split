@@ -434,15 +434,28 @@ Edit the parent spec, without touching anything else:
 | C1 | <criterion> | NN.1 | 3 | <test or check> |
 ```
 
-### 4.3 Repository guard after writing
+### 4.3 Final coherence check
+
+Re-read every file you wrote and the parent spec, and check:
+
+- **Links.** Every `Parent spec`, `Previous` and `Next` link points to a file that exists, with the right number; the delivery table links every sub-spec; no sub-spec is linked twice or skipped.
+- **Numbering.** Sub-specs are `NN.1 … NN.n` with no gaps; every header says `PR k of n` with the same `n`.
+- **Branches.** Each sub-spec's base matches its Dependencies section and the delivery table; a stacked PR's base is the branch of the PR it depends on.
+- **Criteria.** Every row of the traceability matrix appears in the acceptance criteria of the sub-spec it names, and every parent criterion has a row.
+- **Steps.** Every step has exactly one commit message and its checks; the last step of every sub-spec runs all checks.
+- **Parent intact.** The parent spec changed only by the header line and the "Delivery in sub-specs" section (the repository guard confirms this with `git diff`).
+
+If anything fails, fix it in the files you created (never in other files) and re-check. If the fix would need changing the parent beyond the authorized places, stop and ask.
+
+### 4.4 Repository guard after writing
 
 Run the "After writing" part of the repository guard. If it fails, stop there and report; do not send the final message.
 
-### 4.4 Final message
+### 4.5 Final message
 
 Tell the user, and stop:
 
-- The files created and the parent spec edited, with the repository guard result ("only these files changed").
+- The files created and the parent spec edited, with the coherence check and repository guard results ("links, numbering, branches and criteria verified; only these files changed").
 - The sub-specs are `Draft`: re-read and approve each one, then run `/spec-impl NN.1` (and so on, in order).
 - If PRs are stacked: merge them in order and retarget the next PR's base after each merge.
 - Reminder: send the heads-up to the reviewer before opening each PR.
@@ -453,9 +466,12 @@ Do not offer to implement, create branches or open PRs.
 
 ## Quick reference
 
-- Is the spec deliverable in one go? If not, split it by functionality.
-- Does every sub-spec have one specific, measurable purpose (one sentence, no "and")?
-- Is the sub-spec written before implementing (step 1)?
-- Does every commit close one step?
-- Does every PR deliver one functionality?
-- Is every acceptance criterion of the parent covered by exactly one sub-spec?
+- Is the working tree safe to write in (parent spec without uncommitted changes)?
+- Is the spec free of ambiguities that affect the split?
+- Is the spec deliverable in one go? If not, split it by functionality, end to end first.
+- Does every sub-spec pass the seven validations, each with a reason?
+- Is every dependency real, with exactly what it needs and why it can't target the base branch?
+- Do shared contracts follow add → use → remove?
+- Is every parent criterion traced to a sub-spec, a step and a verification?
+- Does every commit close one real step, with the checks that apply to it?
+- Do links, numbering and branches check out, and did only the authorized files change?
