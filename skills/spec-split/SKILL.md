@@ -263,17 +263,27 @@ Show the whole split in one message, before asking anything:
 SPEC NN — <title>  →  n sub-specs / n PRs
 
 NN.1 <functionality>                         PR 1 · branch specNN/1-slug ← base main
-     Objective: <one sentence, no "and">
-     Verify: <how someone else verifies it>
-     1. Sub-spec                             docs(spec): add sub-spec NN.1 for …
-     2. <step>                               feat(scope): …
-     3. <step>                               test(scope): …
+     Objective:     <one sentence, no "and">
+     Result:        <what someone else can verify, and how>
+     Depends on:    none
+     Risks:         <what can go wrong in this PR>
+     Criteria:      C1, C3a
+     1. Sub-spec                             docs(spec): add sub-spec NN.1 for …      checks: —
+     2. <step>                               feat(scope): …                           checks: typecheck, lint, unit
+     3. <step>                               test(scope): …                           checks: all
 
 NN.2 <functionality>                         PR 2 · branch specNN/2-slug ← base specNN/1-slug
+     Depends on:    NN.1 — needs `normalizeCode` from amplify/shared/part.ts (not in main yet)
      ...
 
-Validations: NN.1 7/7 · NN.2 7/7 · …  (one line of reason per validation)
+Open points in the parent spec: <from 2.2, or "none">
 ```
+
+Below it, a validation table, one line of reason per cell:
+
+| Sub-spec | One sentence | Verifiable | Alone | Not broken | Independent | Dependencies | Scope |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| NN.1 | ✓ … | ✓ `part.unit.test.ts` | ✓ … | ✓ additive only | ✓ … | ✓ none | ✓ … |
 
 Below it, the traceability matrix (3.5), including decomposed and cross-cutting criteria.
 
@@ -308,6 +318,8 @@ Write `specs/NN.k-slug.md` for each sub-spec (kebab-case slug from its objective
 > **Previous:** [SPEC NN.(k-1)](…) · **Next:** [SPEC NN.(k+1)](…)
 > **Objective:** <one sentence, no "and">
 
+**Verifiable result:** <what someone else can check when this PR is merged, e.g. "the part's data is updated and shows in later queries">.
+
 ---
 
 ## Scope
@@ -317,6 +329,27 @@ Write `specs/NN.k-slug.md` for each sub-spec (kebab-case slug from its objective
 - <exact items taken from the parent spec, with real file and symbol names>
 
 **Out of scope:** <what the next sub-specs do; name them>. <What stays unchanged, e.g. "no file in src/ changes">.
+
+---
+
+## Dependencies
+
+- <"None: targets `<base>` directly." or, per dependency: "SPEC NN.j — needs `<exact file/type/function/field>`; cannot target `<base>` because …">
+- <Earlier specs this one relies on (e.g. SPEC 03), only if it really uses something they define.>
+
+---
+
+## Integration
+
+Base branch `<base>` because <reason: independent, or the dependency above>.
+<For stacked PRs:> If PR NN.j gets new commits during review, update this branch on top of it and re-run this sub-spec's checks; if the change touches `<contract>`, re-read the steps below first and tell this PR's reviewer what changed. After NN.j is merged, retarget this PR to `<repo base branch>`.
+
+---
+
+## Risks
+
+- <Concrete risk for this PR and how the steps or tests cover it, e.g. "inconsistency between external identifiers and the updated record — covered by step 4 test".>
+- <Open points copied from the parent spec, if any.>
 
 ---
 
@@ -336,7 +369,17 @@ Every step is one commit, with its tests in the same commit. Every commit leaves
 
 ## Acceptance criteria
 
+Criteria covered from the parent spec: <C1, C3a, … with the parent's numbering or quotes>.
+
 - [ ] <criteria taken from the parent spec, verifiable, boolean>
+
+---
+
+## Tests
+
+- **New:** <test file + cases, e.g. `update.unit.test.ts`: valid update, missing record, identifier conflict, persistence>.
+- **Existing to run:** <suites that cover code this PR touches, with the real command>.
+- **Manual check:** <steps and expected result>.
 
 ---
 
@@ -383,6 +426,12 @@ Edit the parent spec, without touching anything else:
 | … | … | … | … | … |
 
 <"Stacked PRs: merge in order." when applicable.>
+
+### Traceability
+
+| # | Criterion | Sub-spec | Step | Verified by |
+| --- | --- | --- | --- | --- |
+| C1 | <criterion> | NN.1 | 3 | <test or check> |
 ```
 
 ### 4.3 Repository guard after writing
