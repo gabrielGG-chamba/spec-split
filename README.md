@@ -34,19 +34,22 @@ The repo needs a `specs/` folder with the spec, and its status must mean "Approv
 
 ## Flow
 
-1. Finds the spec and checks it is approved and not split yet.
-2. Reads `CLAUDE.md`/`AGENTS.md`, recent specs and `git log` to copy the language, header labels, commit style, branch naming and base branch.
-3. Proposes the split: sub-specs by functionality (never by file or layer), steps per sub-spec, one commit message per step, and PR, branch and base per sub-spec. Every sub-spec passes four checks:
-   - It is described in one sentence without "and".
-   - It has a result someone else can verify.
-   - It can be reviewed without reading the other sub-specs.
-   - Merging it does not leave the repo broken.
-4. You confirm or adjust the split. **Nothing is written before this point.**
-5. Writes `specs/NN.k-slug.md` per sub-spec (scope, steps with commit messages, acceptance criteria, how to verify, PR title and description, heads-up message for the reviewer) and adds a "Delivery in sub-specs" table to the parent spec.
+1. Finds the spec, checks it is approved and not split yet, and runs `git status`: if the parent spec has uncommitted changes, it stops.
+2. Reads `CLAUDE.md`/`AGENTS.md`, recent specs and `git log` to copy the language, header labels, commit style, branch naming and base branch, checking each name against a real example in the repo.
+3. Validates the spec: ambiguous requirements, contradictory criteria, undefined dependencies and pending decisions. If they affect the split, it asks first.
+4. Proposes the split:
+   - **End-to-end functionalities first.** A layer split only when each piece has its own purpose, can be tested and leaves the app working. Size alone is not a reason to split.
+   - **Seven validations per sub-spec**, each with a reason: one sentence without "and", verifiable result, reviewable alone, repo not broken, functional independence, justified dependencies, scope integrity.
+   - **Justified dependencies.** A PR is stacked only when it needs something exact from an earlier PR; shared contracts follow add → use → remove. Each stacked sub-spec says what to do if the earlier PR changes during review.
+   - **Traceability matrix**: every parent criterion → sub-spec → step → test. Cross-cutting criteria are decomposed or get an end-to-end check.
+   - **Steps = commits**, each with the checks that apply to it (no artificial steps); the last step runs every check.
+5. You confirm or adjust the split. **Nothing is written before this point.**
+6. Writes `specs/NN.k-slug.md` per sub-spec (verifiable result, scope, dependencies, integration, risks, steps with commit and checks, criteria covered, tests, how to verify, PR draft, reviewer heads-up) and adds a "Delivery in sub-specs" section with the traceability table to the parent spec.
+7. Final coherence check (links, numbering, branches, criteria) and `git status`/`git diff` again: only the new sub-specs and the authorized parent sections may have changed. Anything else, it stops and asks.
 
 ## What it does not do
 
-- It only writes `.md` files in `specs/`. It never writes code, creates branches, commits, pushes or opens PRs.
+- It only creates sub-specs in `specs/` and adds two authorized parts to the parent spec. It never overwrites or deletes a file, never writes code or configuration, and never creates branches, commits, pushes or opens PRs.
 - Sub-specs start as `Draft`: approve each one, then implement it (e.g. with `/spec-impl NN.1`, `/spec-impl NN.2`, …).
 
 ## Example output
