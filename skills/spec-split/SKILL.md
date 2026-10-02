@@ -71,7 +71,7 @@ Talk to the user in the language they write in. Write the sub-specs in the **par
 **After writing**, run `git status --porcelain` and `git diff --stat` again and compare with the baseline:
 
 - New entries must be exactly the sub-spec files you created (`??`) and the parent spec (` M`).
-- `git diff -- <parent spec>` must contain only added lines: the header line and the "Delivery in sub-specs" section. No removed or changed lines.
+- `git diff -- <parent spec>` must contain only added lines: the header line and the "Delivery in sub-specs" section. No removed or changed lines. Only exception: when re-planning an already split spec (Phase 1), lines inside the existing "Delivery in sub-specs" section may change; show that diff to the user.
 - If anything else appears or changed (another file, a removed line, a file you did not create), stop: tell the user exactly what is different and ask how to proceed. Do not undo it yourself.
 
 ---
@@ -128,7 +128,7 @@ An approved spec can still have holes that only show up when you try to cut it. 
 
 For each one, decide whether it **affects the split** (it changes which sub-spec owns something, the order, a dependency between PRs, or whether a PR can be tested alone):
 
-- **Affects the split:** ask before proposing anything, with `AskUserQuestion` (concrete options, your recommendation first). Record the answer; it goes into the affected sub-spec's scope or decisions, quoted as "Clarified during split: …".
+- **Affects the split:** ask before proposing anything, with `AskUserQuestion` (concrete options, your recommendation first). Record the answer; it goes into the affected sub-spec's scope (or risks, if it is a constraint), quoted as "Clarified during split: …".
 - **Doesn't affect the split:** don't block. List it in the proposal under "Open points in the parent spec" and copy it into the affected sub-spec's risks, so `/spec-impl` sees it.
 
 Never resolve an ambiguity by guessing. If the answers change the spec's scope, recommend updating the parent spec first (the user does it) and stop.
@@ -177,7 +177,7 @@ Each sub-spec must pass **all seven**, each with a one-line reason (not just a �
 2. **Verifiable result.** Someone else can verify it (a test, a screen, a query, a command). Name it.
 3. **Reviewable alone.** It can be reviewed without reading the other sub-specs.
 4. **Repo not broken.** Merging it leaves the repo coherent: nothing half-wired is reachable by users, and the checks that apply pass.
-5. **Functional independence.** It delivers a useful result, or it only prepares code that nothing can use yet? If it only prepares, it must meet the layer-split conditions in 3.1; otherwise merge it into the slice that uses it.
+5. **Functional independence.** Does it deliver a useful result, or does it only prepare code that nothing can use yet? If it only prepares, it must meet the layer-split conditions in 3.1; otherwise merge it into the slice that uses it.
 6. **Justified dependencies.** Every dependency on another sub-spec is real and stated (3.4). If it can be integrated against the base branch, it must be.
 7. **Scope integrity.** Every requirement, constraint, business rule and decision of the parent that belongs here is kept; nothing is dropped, softened or added. A behavior that is not in the parent is invented: remove it, or ask (hard rule 7).
 
