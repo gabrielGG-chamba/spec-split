@@ -2,7 +2,7 @@
 name: spec-split
 description: Split an approved spec into sub-specs where every sub-spec is one specific functionality delivered as one pull request, and every step of a sub-spec is one commit. Reads the spec and the project's conventions, proposes the split (sub-specs, steps, commit messages, PR titles, branches), asks for confirmation, then writes one `specs/NN.k-slug.md` per sub-spec and a delivery table in the parent spec. Never writes code, creates branches, commits or opens PRs. Use after `/spec` and before `/spec-impl`, when a spec is too big for a single PR, e.g. "/spec-split", "/spec-split 09", "/spec-split 09-part-management", "split this spec into PRs".
 argument-hint: "[NN | NN-slug | path to spec]"
-allowed-tools: Read, Glob, Grep, Write, Edit, AskUserQuestion, Bash(ls:*), Bash(cat:*), Bash(git log:*), Bash(git branch:*), Bash(git status:*)
+allowed-tools: Read, Glob, Grep, Write, Edit, AskUserQuestion, Bash(ls:*), Bash(cat:*), Bash(git log:*), Bash(git branch:*), Bash(git status:*), Bash(git diff:*)
 ---
 
 # /spec-split — Split a spec into one PR per functionality
@@ -17,6 +17,9 @@ Recent commit style:
 
 Branches:
 !`git branch -a 2>/dev/null`
+
+Working tree at start (baseline for the repository guard):
+!`git status --porcelain 2>/dev/null || echo "Not a git repository"`
 
 ---
 
@@ -43,10 +46,33 @@ Talk to the user in the language they write in. Write the sub-specs in the **par
 2. **Every sub-spec passes the four checks** (see Phase 3). If one fails, re-split before showing it.
 3. **One step = one commit.** Every step has exactly one commit message. No step says "and also…"; if it does, it is two steps.
 4. **Never write before confirmation.** Phase 4 is the only phase that writes files, and only after the user approves the split in Phase 3.
-5. **Only `.md` files in `specs/`.** No code, no `git checkout -b`, `git commit`, `git push`, no `gh`. Branch names and PR titles are proposals written in the sub-specs; `/spec-impl` and the author act on them.
+5. **Only new sub-specs and the authorized parent sections.** You create `specs/NN.k-slug.md` files and edit the parent spec only where Phase 4.2 says. Never code, configuration, or any file outside `specs/`. Never `git checkout`, `git commit`, `git push`, `git stash`, `git reset`, `git restore`, nor `gh`. Branch names and PR titles are proposals written in the sub-specs; `/spec-impl` and the author act on them.
 6. **Don't rewrite the parent spec.** You only add the delivery header line and the "Delivery in sub-specs" section. Its scope, decisions and criteria stay as they are.
 7. **Don't invent scope.** Everything in a sub-spec comes from the parent spec. If the split reveals something the parent does not cover (a missing migration, a missing test setup), ask; don't add it silently.
 8. **Every user decision is an `AskUserQuestion`.** Max 4 options; the recommended option goes first with ` (Recommended)` in its label.
+9. **Never overwrite, never delete.** Before writing a sub-spec, check its path does not exist; if it does, stop and ask. Never remove or revert changes the user already made, committed or not.
+10. **The repository guard is mandatory** (next section). If it finds anything unexpected, stop and ask; do not try to fix it.
+
+---
+
+## Repository guard
+
+**Before starting** (right after locating the spec in Phase 1), read the baseline in the session context (`git status --porcelain`):
+
+- If the **parent spec** has uncommitted changes, or any path you are going to create already appears there, stop. Show the lines and ask the user to commit or stash them first. Never stash or revert yourself.
+- Other uncommitted changes (code, other specs) don't block you: list them to the user once ("these changes are yours and won't be touched") and leave them alone.
+- If it is not a git repository, say the guard cannot verify anything and ask whether to continue.
+
+**While writing** (Phase 4):
+
+- Before each `Write`, check the target path does not exist (`ls specs/<file>`). If it does, stop and ask.
+- The parent spec is the only existing file you edit, and only with `Edit` (never `Write`), only in the places Phase 4.2 allows.
+
+**After writing**, run `git status --porcelain` and `git diff --stat` again and compare with the baseline:
+
+- New entries must be exactly the sub-spec files you created (`??`) and the parent spec (` M`).
+- `git diff -- <parent spec>` must contain only added lines: the header line and the "Delivery in sub-specs" section. No removed or changed lines.
+- If anything else appears or changed (another file, a removed line, a file you did not create), stop: tell the user exactly what is different and ask how to proceed. Do not undo it yourself.
 
 ---
 
@@ -56,7 +82,7 @@ If `$ARGUMENTS` is empty: list the specs from the session context and ask which 
 
 If it has a value: find the file in `specs/` by full name, number (`09`) or slug (`part-management`). If several files share the number, ask which one. If none matches, show the list and ask.
 
-Then read the spec and check:
+Run the "Before starting" part of the repository guard. Then read the spec and check:
 
 - **Status.** Continue only if it means "Approved" in any language (`Approved`, `Aprobado`, `aprobado`, `Aprovado`, …). If it is `Draft`/`In review`, say: "Approve the spec before splitting it: the split depends on its scope and decisions." and stop. If it is `Implemented`/`Obsolete`, say there is nothing to split and stop.
 - **Already split.** If the spec says it is a parent spec, has a "Delivery in sub-specs" section, or `specs/NN.1-*` already exists, show the existing sub-specs and ask whether to stop (recommended) or re-plan only the sub-specs not yet implemented. Never overwrite an existing sub-spec file.
@@ -156,7 +182,7 @@ Repeat until the user picks "Write the sub-specs" or "Cancel".
 
 ## Phase 4 — Write the files
 
-Only after confirmation.
+Only after confirmation. Follow the "While writing" part of the repository guard for every file.
 
 ### 4.1 Sub-spec files
 
@@ -246,11 +272,15 @@ Edit the parent spec, without touching anything else:
 <"Stacked PRs: merge in order." when applicable.>
 ```
 
-### 4.3 Final message
+### 4.3 Repository guard after writing
+
+Run the "After writing" part of the repository guard. If it fails, stop there and report; do not send the final message.
+
+### 4.4 Final message
 
 Tell the user, and stop:
 
-- The files created and the parent spec edited.
+- The files created and the parent spec edited, with the repository guard result ("only these files changed").
 - The sub-specs are `Draft`: re-read and approve each one, then run `/spec-impl NN.1` (and so on, in order).
 - If PRs are stacked: merge them in order and retarget the next PR's base after each merge.
 - Reminder: send the heads-up to the reviewer before opening each PR.
