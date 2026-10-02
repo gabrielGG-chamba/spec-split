@@ -99,7 +99,18 @@ Read, in this order, stopping when you have enough:
    - **Commit style.** If `git log` shows Conventional Commits (`type(scope): message`), use them with the scopes the repo already uses. Otherwise copy the dominant style. If there is no history, use Conventional Commits.
    - **Commit language.** The language `git log` uses, not the spec's.
    - **Branch naming and base.** The prefix the repo uses (`specNN/k-slug`, `spec-NN-slug`, `feat/…`). The base branch: `integration`, `develop` or `main`, whichever the recent feature branches target.
-   - **Test commands.** From `package.json`/`CLAUDE.md` (`pnpm test:unit`, `npm test`, …), to write "how to verify".
+   - **Test commands.** From `package.json`/`CLAUDE.md` (`pnpm test:unit`, `npm test`, …), to write "how to verify" and the checks per step. Use only commands that exist; never invent a script name.
+
+**Check names against real examples.** Before using a format, find at least one real example of it in the repo and use that as the model:
+
+| Name | Where to find real examples |
+| --- | --- |
+| Sub-spec file | Existing `specs/NN.k-*.md`; otherwise `specs/NN-*.md`. |
+| Branch | `git branch -a` (feature branches, not `main`). |
+| Commit message | `git log` (type, scope, language, mood: "add" vs "adds" vs "added"). |
+| PR title | Merge commits in `git log` (`Merge pull request #N from …/<branch>`) and their branch names; recent commit subjects if there are no merges. |
+
+If there is no real example for a name, say so in the proposal ("no branch convention found; using `specNN/k-slug`") instead of presenting the default as the repo's convention.
 
 Never run commands beyond those in `allowed-tools`. Never read secrets or `.env` files.
 
@@ -184,7 +195,14 @@ And every PR must avoid the "split it" signals:
 ### 3.3 Break each sub-spec into steps
 
 - Step 1 is always the sub-spec itself: `docs(spec): add sub-spec NN.k for <functionality>` (in the repo's commit style and language). The reviewer reads the plan first.
-- Each following step is one small, verifiable change that compiles and passes the project's checks on its own. Its tests go **in the same commit** unless the project's conventions say otherwise.
+- Each following step is one small, verifiable change that leaves the repo in a **coherent state**. Its tests go **in the same commit** unless the project's conventions say otherwise.
+- **Checks per step.** Each step lists the checks that apply to it, chosen from the project's real commands (2.1): build/typecheck, lint, unit tests, integration/service tests, manual check. Not every check runs on every commit:
+  - A docs-only step (the sub-spec) needs none.
+  - A pure-logic step: typecheck + lint + its unit tests.
+  - A step that changes a shared API or contract in several places: it may be split into add-new → migrate-callers → remove-old so each commit still typechecks; if that is impossible, say which check is expected to fail in that commit and which next step restores it. That is the only allowed exception, and it is written in the step.
+  - Integration/service tests go on the step that wires things to real services, and on the last step of the sub-spec.
+  - The **last step** of every sub-spec runs every check the project has; the PR must be fully green.
+- **No artificial steps.** A step exists because it is a distinct, reviewable change. Don't split a step to get more commits, don't add "cleanup" or "polish" steps without concrete content, and don't merge two distinct changes to get fewer. Two to six steps per sub-spec is typical, not a target.
 - The commit message names the step it closes: `type(scope): <what this step does>`. No "WIP", "fixes", "more changes", no two actions joined by "and".
 - Order the steps in the order the implementation is reasoned about (structure → behavior → presentation; model → logic → wiring → tests against real services).
 - A step with no tests of its own says why (e.g. "the schema is tested in step 6").
@@ -304,12 +322,14 @@ Write `specs/NN.k-slug.md` for each sub-spec (kebab-case slug from its objective
 
 ## Steps
 
-Every step is one commit, with its tests in the same commit. Every commit builds and passes `<project checks>`. If a step that was not planned appears during implementation, add it here and close it with its own commit.
+Every step is one commit, with its tests in the same commit. Every commit leaves the repo coherent and passes the checks listed for it; the last step passes all of `<project checks>`. If a step that was not planned appears during implementation, add it here and close it with its own commit.
 
 1. **Sub-spec.** This file.
    - Commit: `docs(spec): add sub-spec NN.k for <functionality>`
+   - Checks: none (docs only).
 2. **<Step title>.** <What changes, which files, which tests.>
    - Commit: `<type(scope): message>`
+   - Checks: <e.g. `pnpm typecheck`, `pnpm lint`, `pnpm test:unit`>.
 ...
 
 ---
