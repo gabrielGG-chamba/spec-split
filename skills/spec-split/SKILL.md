@@ -219,8 +219,25 @@ A sub-spec that changes a contract in a breaking way while others still depend o
 - If the change touches the contract the dependent PR uses, the author re-reads the dependent sub-spec and updates its steps before continuing; the reviewer of the dependent PR is told what changed.
 - After the earlier PR is merged, the dependent PR is retargeted to the base branch.
 
-### 3.5 Show the proposal
+### 3.5 Trace the acceptance criteria
 
+Build a traceability matrix. Every acceptance criterion of the parent spec gets one row (quote it, or use its number if the parent numbers them):
+
+| # | Parent criterion | Sub-spec | Step | Verified by |
+| --- | --- | --- | --- | --- |
+| C1 | "Duplicate code in any case returns `PIEZA_DUPLICADA`" | NN.2 | 3 | `logic.unit.test.ts`: duplicate code case |
+| C2 | "Two simultaneous saves: one wins, the other gets `PIEZA_MODIFICADA`" | NN.2 | 6 | `gestion-pieza.int.test.ts`: concurrent saves |
+
+Rules:
+
+- Every criterion has a row. A criterion without a sub-spec, a step or a verification means the split is incomplete: fix it before showing it.
+- **Verified by** names a concrete test (file + case), a command, or a manual check with its expected result. "Works" is not a verification.
+- **Cross-cutting criteria** (they need changes in several sub-specs, e.g. "every write leaves an audit record", "the app never shows a raw error"): don't force them into one sub-spec. Either:
+  - **Decompose** them into one sub-criterion per sub-spec (C3a → NN.1, C3b → NN.2), each verifiable inside its own PR; or
+  - **Explain the dependency**: which sub-specs contribute, and which one (normally the last) owns the **end-to-end check** that proves the whole criterion. That check goes in its acceptance criteria and tests.
+- Never rewrite a criterion's meaning while decomposing it. The sub-criteria together must say exactly what the original says.
+
+### 3.6 Show the proposal
 
 Show the whole split in one message, before asking anything:
 
@@ -238,14 +255,15 @@ NN.2 <functionality>                         PR 2 · branch specNN/2-slug ← ba
      ...
 
 Validations: NN.1 7/7 · NN.2 7/7 · …  (one line of reason per validation)
-Parent criteria covered: <criterion → NN.k> (every acceptance criterion of the parent maps to exactly one sub-spec)
 ```
+
+Below it, the traceability matrix (3.5), including decomposed and cross-cutting criteria.
 
 Then a short note on any judgment call (why a piece went first, why two things stayed together).
 
 **Base branch.** For every PR, show its base. For every stacked PR, show what it needs from the earlier PR and why (3.4). Note that stacked PRs must be merged in order.
 
-**Parent criteria coverage.** Every acceptance criterion of the parent spec must land in exactly one sub-spec. If one is not covered, the split is incomplete: fix it before showing it.
+**Parent criteria coverage.** Every acceptance criterion of the parent spec appears in the matrix with a sub-spec, a step and a verification. If one doesn't, the split is incomplete: fix it before showing it.
 
 Ask with `AskUserQuestion`:
 
