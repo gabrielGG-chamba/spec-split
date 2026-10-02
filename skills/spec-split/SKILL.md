@@ -87,7 +87,9 @@ Run the "Before starting" part of the repository guard. Then read the spec and c
 - **Status.** Continue only if it means "Approved" in any language (`Approved`, `Aprobado`, `aprobado`, `Aprovado`, …). If it is `Draft`/`In review`, say: "Approve the spec before splitting it: the split depends on its scope and decisions." and stop. If it is `Implemented`/`Obsolete`, say there is nothing to split and stop.
 - **Already split.** If the spec says it is a parent spec, has a "Delivery in sub-specs" section, or `specs/NN.1-*` already exists, show the existing sub-specs and ask whether to stop (recommended) or re-plan only the sub-specs not yet implemented. Never overwrite an existing sub-spec file.
 
-## Phase 2 — Learn the project's conventions
+## Phase 2 — Learn the project and validate the spec
+
+### 2.1 Conventions
 
 Read, in this order, stopping when you have enough:
 
@@ -100,6 +102,25 @@ Read, in this order, stopping when you have enough:
    - **Test commands.** From `package.json`/`CLAUDE.md` (`pnpm test:unit`, `npm test`, …), to write "how to verify".
 
 Never run commands beyond those in `allowed-tools`. Never read secrets or `.env` files.
+
+### 2.2 Validate the spec before splitting
+
+An approved spec can still have holes that only show up when you try to cut it. Read the whole spec and look for:
+
+| Problem | Example |
+| --- | --- |
+| **Ambiguous requirement** | "The list updates quickly" — on save, on an interval, in real time? |
+| **Contradictory criteria** | One criterion says the field is optional, another rejects saving without it. |
+| **Undefined dependency** | "Uses the pricing service" with no spec, file or API that defines it. |
+| **Pending decision** | "TBD", "to be decided", "option A or B", an open question in the decisions section. |
+| **Scope gap** | A criterion that needs a change the scope does not list (a migration, a permission, a test setup). |
+
+For each one, decide whether it **affects the split** (it changes which sub-spec owns something, the order, a dependency between PRs, or whether a PR can be tested alone):
+
+- **Affects the split:** ask before proposing anything, with `AskUserQuestion` (concrete options, your recommendation first). Record the answer; it goes into the affected sub-spec's scope or decisions, quoted as "Clarified during split: …".
+- **Doesn't affect the split:** don't block. List it in the proposal under "Open points in the parent spec" and copy it into the affected sub-spec's risks, so `/spec-impl` sees it.
+
+Never resolve an ambiguity by guessing. If the answers change the spec's scope, recommend updating the parent spec first (the user does it) and stop.
 
 ## Phase 3 — Propose the split
 
