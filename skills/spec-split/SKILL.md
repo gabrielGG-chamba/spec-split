@@ -167,7 +167,7 @@ Each sub-spec must pass **all seven**, each with a one-line reason (not just a �
 3. **Reviewable alone.** It can be reviewed without reading the other sub-specs.
 4. **Repo not broken.** Merging it leaves the repo coherent: nothing half-wired is reachable by users, and the checks that apply pass.
 5. **Functional independence.** It delivers a useful result, or it only prepares code that nothing can use yet? If it only prepares, it must meet the layer-split conditions in 3.1; otherwise merge it into the slice that uses it.
-6. **Justified dependencies.** Every dependency on another sub-spec is real and stated. If it can be integrated against the base branch, it must be.
+6. **Justified dependencies.** Every dependency on another sub-spec is real and stated (3.4). If it can be integrated against the base branch, it must be.
 7. **Scope integrity.** Every requirement, constraint, business rule and decision of the parent that belongs here is kept; nothing is dropped, softened or added. A behavior that is not in the parent is invented: remove it, or ask (hard rule 7).
 
 If a proposal fails any validation, fix it (merge, re-split, reorder, re-target) and re-validate **before** asking for approval. Never show a failing proposal hoping the user catches it.
@@ -189,7 +189,38 @@ And every PR must avoid the "split it" signals:
 - Order the steps in the order the implementation is reasoned about (structure → behavior → presentation; model → logic → wiring → tests against real services).
 - A step with no tests of its own says why (e.g. "the schema is tested in step 6").
 
-### 3.4 Show the proposal
+### 3.4 Dependencies, shared contracts and base branches
+
+**Default: independent.** Every PR targets the repo's base branch unless it has a real dependency.
+
+**A dependency is real** only when the PR needs code from another PR that is not yet in the base branch to compile, to be tested, or to make sense. For each dependency, state:
+
+- **What exactly** it needs (a file, a type, a function, a schema field, a permission).
+- **Why** it cannot target the base branch (e.g. "imports `normalizeCode` from `amplify/shared/part.ts`, created in NN.1").
+
+If you cannot name the exact thing, there is no dependency: target the base branch. Don't stack PRs only to keep them in order.
+
+**Shared contracts.** Identify every change to a model, API, GraphQL/DB schema, permission or shared data structure that other sub-specs read or write. For each one, define a compatible sequence:
+
+1. **Additive first:** add the new field/endpoint/permission without removing or changing the old one. Existing code keeps working.
+2. **Consumers next:** the sub-specs that use the new contract.
+3. **Removal last:** retire the old field/endpoint/permission in its own sub-spec, once nothing uses it.
+
+A sub-spec that changes a contract in a breaking way while others still depend on the old shape is not allowed; re-order or split it into additive + removal.
+
+**Base branch per PR:**
+
+- Independent → the repo's base branch.
+- Dependent → the branch of the PR it depends on (stacked). If it depends on two earlier PRs, target the latest one in the chain and say so.
+
+**When an earlier stacked PR changes during review** (write this in every stacked sub-spec's Integration section):
+
+- After the earlier PR gets new commits, the author updates the dependent branch on top of it (`git rebase <earlier-branch>` or merge, following the repo's convention) and re-runs that sub-spec's checks.
+- If the change touches the contract the dependent PR uses, the author re-reads the dependent sub-spec and updates its steps before continuing; the reviewer of the dependent PR is told what changed.
+- After the earlier PR is merged, the dependent PR is retargeted to the base branch.
+
+### 3.5 Show the proposal
+
 
 Show the whole split in one message, before asking anything:
 
@@ -212,7 +243,7 @@ Parent criteria covered: <criterion → NN.k> (every acceptance criterion of the
 
 Then a short note on any judgment call (why a piece went first, why two things stayed together).
 
-**Base branch.** If a PR needs code from the previous one, its base is the previous branch (stacked PRs, merged in order). If it is independent, its base is the repo's base branch. Say which, and note that stacked PRs must be merged in order.
+**Base branch.** For every PR, show its base. For every stacked PR, show what it needs from the earlier PR and why (3.4). Note that stacked PRs must be merged in order.
 
 **Parent criteria coverage.** Every acceptance criterion of the parent spec must land in exactly one sub-spec. If one is not covered, the split is incomplete: fix it before showing it.
 
