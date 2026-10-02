@@ -42,8 +42,8 @@ Talk to the user in the language they write in. Write the sub-specs in the **par
 
 ## Hard rules
 
-1. **Split by functionality.** Never by file, by layer for its own sake, or by hours. A piece is a functionality when it can be described in one sentence and has a result someone can verify.
-2. **Every sub-spec passes the four checks** (see Phase 3). If one fails, re-split before showing it.
+1. **Split by functionality, end to end first.** Never by file, by hours, or by layer as a default. A piece is a functionality when it can be described in one sentence and has a result someone can verify. A layer split is allowed only when each piece justifies itself (Phase 3.1).
+2. **Every sub-spec passes the seven validations** (Phase 3.2). If one fails, fix the split before showing it. Ticking boxes is not enough: each validation needs a one-line reason.
 3. **One step = one commit.** Every step has exactly one commit message. No step says "and also…"; if it does, it is two steps.
 4. **Never write before confirmation.** Phase 4 is the only phase that writes files, and only after the user approves the split in Phase 3.
 5. **Only new sub-specs and the authorized parent sections.** You create `specs/NN.k-slug.md` files and edit the parent spec only where Phase 4.2 says. Never code, configuration, or any file outside `specs/`. Never `git checkout`, `git commit`, `git push`, `git stash`, `git reset`, `git restore`, nor `gh`. Branch names and PR titles are proposals written in the sub-specs; `/spec-impl` and the author act on them.
@@ -126,35 +126,58 @@ Never resolve an ambiguity by guessing. If the answers change the spec's scope, 
 
 ### 3.1 Find the functionalities
 
-Go through the spec's scope, data model, implementation plan and acceptance criteria and group them into functionalities. Useful questions:
+Go through the spec's scope, data model, implementation plan and acceptance criteria and group them into functionalities.
 
-- Which part can be **verified alone**? (A form with its validations, without backend. A service with its contract, tested in isolation. The integration that closes the flow end to end.)
-- Which part is a **prerequisite** for others? (Shared rules, schema, helpers.) It goes first and must be additive.
+**Start from end-to-end slices.** The first question is: which behaviors can a user (or a calling system) observe, and can each one be delivered through every layer it needs in one PR? A slice like "update a single part from the edit screen" (UI + service + backend for that one behavior) is preferred over "all the UI", "all the services", "all the backend".
+
+**Split by layer only when it is justified.** A layer piece (e.g. a backend capability before its UI) is acceptable only if all of these hold, and you write the reason in the proposal:
+
+- It has its **own purpose** beyond "the next PR needs it" (e.g. a contract other teams consume, a migration that must run first, a risky change better reviewed alone).
+- Its result is **verifiable** on its own (unit/service tests, a query, a script), even if users don't see it yet.
+- It leaves the **app working**: nothing half-wired is reachable by users.
+
+If a layer piece fails any of those, merge it into the slice that uses it.
+
+Other useful questions:
+
+- Which part is a **prerequisite** for others? (Shared rules, schema, helpers.) It goes first, must be additive, and must pass the conditions above.
 - Which change **removes** or **switches** something? (Retiring old permissions, switching the UI to the new path.) It goes after the new path exists.
 - What can be **left out** of the first PRs without breaking anything? Prefer additive PRs first, the switch-over last.
 
-Typical shapes (not templates; follow the spec):
+**Size is not a reason by itself.** Don't split because a PR "looks big". Judge each candidate PR by:
 
-- UI → services → integration.
-- Shared rules → backend capability (unused yet) → frontend switches to it → retire the old path.
+| Factor | Split when… |
+| --- | --- |
+| Behaviors | It delivers more than one behavior a reviewer must reason about separately. |
+| Complexity | It mixes a hard change (concurrency, data migration, permissions) with routine ones. |
+| Risk | A failure in one part would force reverting unrelated parts. |
+| Review difficulty | The reviewer needs to hold several contexts at once to approve it. |
+| Testability | Parts of it can't be tested until other parts exist. |
 
-If the spec is small enough for one PR (it already passes the checks and the signals below), say so and propose a single sub-spec — or no split at all, and recommend running `/spec-impl` directly.
+A large but uniform, single-behavior PR (e.g. the same rename across many files) stays as one.
 
-### 3.2 Check every sub-spec
+If the spec is small enough for one PR, say so and propose a single sub-spec — or no split at all, and recommend running `/spec-impl` directly.
 
-Each sub-spec must pass **all four**:
+### 3.2 Validate every sub-spec
 
-1. It is described in **one sentence without "and"/"y"**.
-2. It has a **result someone else can verify** (a test, a screen, a query, a command).
-3. It can be **reviewed without reading the other sub-specs**.
-4. Merging it **does not leave the repo broken** (builds, lint and tests pass; nothing half-wired is reachable by users).
+Each sub-spec must pass **all seven**, each with a one-line reason (not just a ✓):
+
+1. **One sentence.** It is described in one sentence without "and"/"y".
+2. **Verifiable result.** Someone else can verify it (a test, a screen, a query, a command). Name it.
+3. **Reviewable alone.** It can be reviewed without reading the other sub-specs.
+4. **Repo not broken.** Merging it leaves the repo coherent: nothing half-wired is reachable by users, and the checks that apply pass.
+5. **Functional independence.** It delivers a useful result, or it only prepares code that nothing can use yet? If it only prepares, it must meet the layer-split conditions in 3.1; otherwise merge it into the slice that uses it.
+6. **Justified dependencies.** Every dependency on another sub-spec is real and stated. If it can be integrated against the base branch, it must be.
+7. **Scope integrity.** Every requirement, constraint, business rule and decision of the parent that belongs here is kept; nothing is dropped, softened or added. A behavior that is not in the parent is invented: remove it, or ask (hard rule 7).
+
+If a proposal fails any validation, fix it (merge, re-split, reorder, re-target) and re-validate **before** asking for approval. Never show a failing proposal hoping the user catches it.
 
 And every PR must avoid the "split it" signals:
 
 | Good PR | Split it when |
 | --- | --- |
 | Understood by reading the title. | The title needs "and" or a list. |
-| Touches one functionality. | It mixes frontend, services and backend in one diff. |
+| Touches one functionality. | It mixes several behaviors, or several layers that don't serve the same behavior. |
 | Reviewed in one sitting. | The reviewer would need to schedule time to read it. |
 | Testable on its own. | Testing it requires waiting for another PR. |
 
@@ -183,7 +206,7 @@ NN.1 <functionality>                         PR 1 · branch specNN/1-slug ← ba
 NN.2 <functionality>                         PR 2 · branch specNN/2-slug ← base specNN/1-slug
      ...
 
-Checks: NN.1 ✓✓✓✓ · NN.2 ✓✓✓✓ · …
+Validations: NN.1 7/7 · NN.2 7/7 · …  (one line of reason per validation)
 Parent criteria covered: <criterion → NN.k> (every acceptance criterion of the parent maps to exactly one sub-spec)
 ```
 
