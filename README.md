@@ -34,15 +34,14 @@ The repo needs a `specs/` folder with the spec, and its status must mean "Approv
 
 ## Flow
 
-1. Finds the spec and checks it is approved and not split yet.
-2. Reads `CLAUDE.md`/`AGENTS.md`, recent specs and `git log` to copy the language, header labels, commit style, branch naming and base branch.
-3. Proposes the split: sub-specs by functionality (never by file or layer), steps per sub-spec, one commit message per step, and PR, branch and base per sub-spec. Every sub-spec passes four checks:
-   - It is described in one sentence without "and".
-   - It has a result someone else can verify.
-   - It can be reviewed without reading the other sub-specs.
-   - Merging it does not leave the repo broken.
-4. You confirm or adjust the split. **Nothing is written before this point.**
-5. Writes `specs/NN.k-slug.md` per sub-spec (scope, steps with commit messages, acceptance criteria, how to verify, PR title and description, heads-up message for the reviewer) and adds a "Delivery in sub-specs" table to the parent spec.
+1. Finds the spec and checks it is approved and not split yet (sub-specs are matched by their `Parent spec` link, so two specs sharing a number don't get mixed up). If it is already split, offers to stop, add sub-specs or re-plan only the `Draft` ones.
+2. Records the working tree as a baseline (repository guard) and refuses to start if the parent spec has uncommitted changes.
+3. Reads `CLAUDE.md`/`AGENTS.md`, recent specs and `git log` to copy the language, header labels, commit style, branch naming and base branch, and asks about ambiguities in the spec that affect the split.
+4. Proposes the split with **few cuts**: it starts from one PR and only cuts where it matters (risky change, real prerequisite, independent functionality, switch-over), usually 1–3 sub-specs, each cut with its reason. Sub-specs go by functionality, end to end first (by layer only when justified), steps per sub-spec with one commit message and its checks, and PR, branch and base per sub-spec. Every sub-spec passes seven validations, each with a reason: one sentence, verifiable result, reviewable alone, repo not broken, functional independence, justified dependencies and scope integrity. Every acceptance criterion of the parent is traced to a sub-spec, a step and a verification.
+5. You confirm or adjust the split. **Nothing is written before this point.**
+6. Writes `specs/NN.k-slug.md` per sub-spec (scope, dependencies, integration, risks, steps with commit messages, acceptance criteria, tests, how to verify, PR title and description, heads-up message for the reviewer) and adds a "Delivery in sub-specs" table with traceability to the parent spec. Then checks links and numbering and confirms with `git status`/`git diff` that only those files changed.
+
+The parent spec and all sub-specs are committed together in the first step of PR 1 (`docs(spec): add delivery plan for SPEC NN`), so the delivery table never links to files that are missing from the base branch.
 
 ## What it does not do
 
@@ -55,11 +54,13 @@ The repo needs a `specs/` folder with the spec, and its status must mean "Approv
 SPEC 09 — Part management  →  3 sub-specs / 3 PRs
 
 09.1 Shared part rules                        PR 1 · branch spec09/1-part-rules ← base main
-     1. Sub-spec                              docs(spec): add sub-spec 09.1 for shared part rules
+     1. Delivery plan                         docs(spec): add delivery plan for SPEC 09
      2. Code normalization                    feat(inventory): add part code normalization
      3. Input validation                      feat(inventory): add part input validation
 
 09.2 Part management Lambda                   PR 2 · branch spec09/2-gestion-pieza ← base spec09/1-part-rules
+     Depends on:    09.1 — needs `normalizeCode` from amplify/shared/part.ts (not in main yet)
+     1. Mutation handler                      feat(inventory): add gestion-pieza mutation handler
      ...
 ```
 
