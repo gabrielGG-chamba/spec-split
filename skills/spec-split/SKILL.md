@@ -36,14 +36,14 @@ You take a spec that is already well written and cut it into **specific delivera
 
 Argument received: `$ARGUMENTS` (spec number, slug or path; empty means "ask").
 
-Talk to the user in the language they write in. Write the sub-specs in the **parent spec's language**, using its header labels and section names.
+Talk to the user in the language they write in, in plain words and short messages: lead with what they need to decide, keep the evidence for when they ask (Phase 3.6), and never make them answer the same thing twice. Write the sub-specs in the **parent spec's language**, using its header labels and section names.
 
 ---
 
 ## Hard rules
 
 1. **Split by functionality, end to end first.** Never by file, by hours, or by layer as a default. A piece is a functionality when it can be described in one sentence and has a result someone can verify. A layer split is allowed only when each piece justifies itself (Phase 3.1). **Few cuts:** start from one PR and cut only where it matters (risk, real prerequisite, independent value, switch-over); usually 1–3 sub-specs.
-2. **Every sub-spec passes the seven validations** (Phase 3.2). If one fails, fix the split before showing it. Ticking boxes is not enough: each validation needs a one-line reason.
+2. **Every sub-spec passes the seven validations** (Phase 3.2). If one fails, fix the split before showing it. Ticking boxes is not enough: each validation needs a one-line reason (shown in the detail view, 3.6).
 3. **One step = one commit.** Every step has exactly one commit message. No step says "and also…"; if it does, it is two steps.
 4. **Never write before confirmation.** Phase 4 is the only phase that writes files, and only after the user approves the split in Phase 3.
 5. **Only new sub-specs and the authorized parent sections.** You create `specs/NN.k-slug.md` files and edit the parent spec only where Phase 4.2 says. Never code, configuration, or any file outside `specs/`. Never `git checkout`, `git commit`, `git push`, `git stash`, `git reset`, `git restore`, nor `gh`. Branch names and PR titles are proposals written in the sub-specs; `/spec-impl` and the author act on them.
@@ -275,42 +275,47 @@ Rules:
 
 ### 3.6 Show the proposal
 
-Show the whole split in one message, before asking anything:
+**Simple first, details on demand.** The user must understand the plan in under a minute. Do every check of 3.2–3.5 in full, but show only what the user needs to decide; the evidence is one option away.
+
+**Summary view** (always shown, in one message, before asking anything):
 
 ```text
-SPEC NN — <title>  →  n sub-specs / n PRs
+📦 SPEC NN — <title>
+   n PRs · <independent | stacked: merge in order> · base <base>
 
-NN.1 <functionality>                         PR 1 · branch specNN/1-slug ← base main
-     Objective:     <one sentence, no "and">
-     Result:        <what someone else can verify, and how>
-     Depends on:    none
-     Risks:         <what can go wrong in this PR>
-     Criteria:      C1, C3a
-     1. Delivery plan                        docs(spec): add delivery plan for SPEC NN  checks: —
-     2. <step>                               feat(scope): …                           checks: typecheck, lint, unit
-     3. <step>                               test(scope): …                           checks: all
+  ┌─ PR 1 · NN.1 <functionality> ─────────────────────────────
+  │ 🎯 <objective, one sentence in plain language>
+  │ ✅ <how someone checks it works>
+  │ 🧩 3 commits · branch specNN/1-slug ← main
+  └───────────────────────────────────────────────────────────
+        │
+        ▼  needs `normalizeCode` (only when stacked)
+  ┌─ PR 2 · NN.2 <functionality> ─────────────────────────────
+  │ 🎯 …
+  │ ✅ …
+  │ 🧩 4 commits · branch specNN/2-slug ← specNN/1-slug
+  └───────────────────────────────────────────────────────────
 
-NN.2 <functionality>                         PR 2 · branch specNN/2-slug ← base specNN/1-slug
-     Depends on:    NN.1 — needs `normalizeCode` from amplify/shared/part.ts (not in main yet)
-     1. <step>                               feat(scope): …                           checks: typecheck, lint, unit
-     ...
-
-Open points in the parent spec: <from 2.2, or "none">
+✂️  Why these cuts: NN.1 goes alone because <important reason from 3.1>.
+⚠️  To keep in mind: <open points from 2.2 and the main risk, max 3 lines; omit if none>
+✔️  7 validations passed · n/n parent criteria covered
 ```
 
-Below it, a validation table, one line of reason per cell:
+Rules for the summary:
+
+- **Plain language.** Describe what the user gets, not the internals: "the team can edit a part from its screen", not "add `gestionPieza` mutation with optimistic locking". Code names only where they are the dependency itself.
+- **Short.** Max ~25 lines for 3 PRs. No tables in this view, no repeated information.
+- **Icons with meaning only:** 📦 spec, 🎯 objective, ✅ verification, 🧩 commits/branch, ✂️ cut reasons, ⚠️ warnings, ✔️ checks passed, 💡 suggestions. Always followed by text, never alone. If the parent spec or the user's messages avoid emojis, use the same layout without them.
+- **Arrows only for real dependencies.** Independent PRs are listed without arrows.
+- **Every cut has its reason** in the ✂️ line ("NN.k goes alone because <important reason from 3.1>"). A cut without a reason is merged before showing the proposal.
+
+**Detail view** (only when the user picks "See details"): per PR, the steps with commit messages and checks, dependencies and risks; the base-branch notes for stacked PRs (what each needs from the earlier PR and why, 3.4); the validation table, one line of reason per cell; and the traceability matrix (3.5), including decomposed and cross-cutting criteria.
 
 | Sub-spec | One sentence | Verifiable | Alone | Not broken | Independent | Dependencies | Scope |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | NN.1 | ✓ … | ✓ `part.unit.test.ts` | ✓ … | ✓ additive only | ✓ … | ✓ none | ✓ … |
 
-Below it, the traceability matrix (3.5), including decomposed and cross-cutting criteria.
-
-Then a short note on any judgment call (why a piece went first, why two things stayed together). For **every cut**, one line: "NN.k is separate from NN.(k+1) because <important reason from 3.1>". A cut without a reason is merged before showing the proposal.
-
-**Base branch.** For every PR, show its base. For every stacked PR, show what it needs from the earlier PR and why (3.4). Note that stacked PRs must be merged in order.
-
-**Parent criteria coverage.** Every acceptance criterion of the parent spec appears in the matrix with a sub-spec, a step and a verification. If one doesn't, the split is incomplete: fix it before showing it.
+A proposal that fails a validation or leaves a parent criterion uncovered is fixed before it is shown in either view (3.2, 3.5): "7 validations passed" in the summary must be true.
 
 ### 3.7 Optional enhancement suggestions
 
@@ -331,32 +336,36 @@ Skip this section (say "no suggestions: this spec has no user-facing behavior") 
 
 **Visual and innovative ideas** follow the same rules: they serve the user's task (clearer status, fewer steps, better feedback, empty states that guide), not decoration.
 
-For each suggestion, show one block:
+**Simple and intuitive first.** Prefer, in this order: ideas that **remove** effort (fewer clicks or fields, sensible defaults, autocomplete, inline validation, undo instead of confirm dialogs), ideas that make the state **obvious** (clear labels, progress, status colors with text, guiding empty states), and only then motivational or decorative ones. An idea that needs explaining or a tutorial is not simple: drop it. Every idea follows the project's existing visual style and is understood at first sight by a new user.
+
+Show each suggestion as a short card, in plain language:
 
 ```text
-S1 <name>                                     → NN.k (no new PR)
-   Idea:       <what the user sees and does>
-   Goal:       <parent objective or criterion it serves>
-   Metric:     <how to know it works, e.g. % of parts saved with complete data>
-   Cost:       small | medium  — <files/components it touches>
-   Guardrails: <which rules above it respects and how, e.g. "team progress only, no ranking">
+💡 S1 <name>  → goes in NN.k · cost small
+   <what the user sees and does, one sentence>
+   🎯 <goal it serves> · 📈 <metric, e.g. % of parts saved with complete data>
 ```
+
+Keep the guardrail reasoning (which gamification rules it respects and how) for the detail view and the sub-spec; check it before showing the card.
 
 Rules for suggestions:
 
 - They go **inside an existing sub-spec** (the slice whose screen they improve). Never create a new sub-spec or PR only for a suggestion, unless the user asks; this keeps the split small (3.1).
 - Only `small` or `medium` cost. A large idea is mentioned in one line as "for a future spec" and not offered.
-- Ask with `AskUserQuestion` (`multiSelect: true`, max 4 options, one per suggestion, the one with the best goal/cost ratio first with ` (Recommended)`). The user can pick none.
+- The user picks them in the same `AskUserQuestion` call as the decision below (`multiSelect: true`, max 4 options, one per suggestion, the one with the best goal/cost ratio first with ` (Recommended)`). The user can pick none.
 - Every **accepted** suggestion becomes, in its sub-spec: a scope item marked "Approved during split: S<n> …", a step (or part of an existing step) with its commit and checks, an acceptance criterion with its metric, and tests. In the traceability matrix it gets its own row (`S1`, `S2`, …) marked "approved during split", not a parent criterion.
 - Rejected suggestions are not written anywhere.
 
-Then ask with `AskUserQuestion`:
+### 3.8 One decision for the user
+
+Ask everything in **one** `AskUserQuestion` call, so the user answers once: the suggestions question (3.7, if any) and this one. Labels short and in the user's language:
 
 - **Write the sub-specs (Recommended)**
-- **Adjust the split** — then ask what to change (merge, split further, reorder, rename, move a step), apply it, re-run the checks and show the proposal again.
+- **See details** — show the detail view (3.6), then ask this question again.
+- **Adjust the split** — ask what to change in one open question (merge, split further, reorder, rename, move a step), apply it, re-run the checks and show the summary again.
 - **Cancel** — write nothing.
 
-Repeat until the user picks "Write the sub-specs" or "Cancel".
+Repeat until the user picks "Write the sub-specs" or "Cancel". Don't ask anything the user already answered, and don't ask about something with a clear default: use the default and say so in the summary.
 
 ## Phase 4 — Write the files
 
@@ -514,13 +523,23 @@ Run the "After writing" part of the repository guard. If it fails, stop there an
 
 ### 4.5 Final message
 
-Tell the user, and stop:
+Tell the user, short and visual, and stop:
 
-- The files created and the parent spec edited, with the coherence check and repository guard results ("links, numbering, branches and criteria verified; only these files changed").
-- The sub-specs are `Draft`: re-read and approve each one, then run `/spec-impl NN.1` (and so on, in order).
-- The parent spec and **all** sub-spec files are committed together in step 1 of NN.1 (`docs(spec): add delivery plan for SPEC NN`), not one per PR.
-- If PRs are stacked: merge them in order and retarget the next PR's base after each merge.
-- Reminder: send the heads-up to the reviewer before opening each PR.
+```text
+✅ SPEC NN split into n PRs — only these files changed (links, numbering and criteria verified)
+
+   📄 specs/NN.1-slug.md   PR 1 · <functionality>
+   📄 specs/NN.2-slug.md   PR 2 · <functionality>
+   ✏️ specs/NN-slug.md     delivery table added
+
+👉 Next
+   1. Read and approve each sub-spec (they are Draft).
+   2. Commit the parent and all sub-specs together in step 1 of NN.1: `docs(spec): add delivery plan for SPEC NN`.
+   3. Run `/spec-impl NN.1`, then the next ones in order.
+   4. Send the heads-up to the reviewer before opening each PR.
+```
+
+Add "Stacked PRs: merge in order and retarget the next PR's base after each merge" to the steps only when PRs are stacked. Same icon rule as 3.6.
 
 Do not offer to implement, create branches or open PRs.
 
