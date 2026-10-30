@@ -38,8 +38,9 @@ The repo needs a `specs/` folder with the spec, and its status must mean "Approv
 2. Records the working tree as a baseline (repository guard) and refuses to start if the parent spec has uncommitted changes.
 3. Reads `CLAUDE.md`/`AGENTS.md`, recent specs and `git log` to copy the language, header labels, commit style, branch naming and base branch, and asks about ambiguities in the spec that affect the split.
 4. Proposes the split with **few cuts**: it starts from one PR and only cuts where it matters (risky change, real prerequisite, independent functionality, switch-over), usually 1–3 sub-specs, each cut with its reason. Sub-specs go by functionality, end to end first (by layer only when justified), steps per sub-spec with one commit message and its checks, and PR, branch and base per sub-spec. Every sub-spec passes seven validations, each with a reason: one sentence, verifiable result, reviewable alone, repo not broken, functional independence, justified dependencies and scope integrity. Every acceptance criterion of the parent is traced to a sub-spec, a step and a verification.
-5. Offers up to 4 **optional suggestions** for the user-facing sub-specs: innovative or visually attractive ideas and business gamification done right (tied to a goal and a metric, professional tone, no public rankings or dark patterns, accessible). You pick which ones to accept; only those enter the sub-specs, marked "Approved during split", with their own step, criterion and tests.
-6. You confirm or adjust the split. **Nothing is written before this point.**
+   You see a short **visual summary** (one card per PR, in plain language, with why each cut exists); steps, validations and traceability are one click away in "See details".
+5. Offers up to 4 **optional suggestions** for the user-facing sub-specs, simplest first (fewer clicks, clearer state), then innovative or visually attractive ideas and business gamification done right (tied to a goal and a metric, professional tone, no public rankings or dark patterns, accessible). You pick which ones to accept; only those enter the sub-specs, marked "Approved during split", with their own step, criterion and tests.
+6. You answer **once**: accept suggestions and write, see details, adjust or cancel. **Nothing is written before this point.**
 7. Writes `specs/NN.k-slug.md` per sub-spec (scope, dependencies, integration, risks, steps with commit messages, acceptance criteria, tests, how to verify, PR title and description, heads-up message for the reviewer) and adds a "Delivery in sub-specs" table with traceability to the parent spec. Then checks links and numbering and confirms with `git status`/`git diff` that only those files changed.
 
 The parent spec and all sub-specs are committed together in the first step of PR 1 (`docs(spec): add delivery plan for SPEC NN`), so the delivery table never links to files that are missing from the base branch.
@@ -52,17 +53,28 @@ The parent spec and all sub-specs are committed together in the first step of PR
 ## Example output
 
 ```text
-SPEC 09 — Part management  →  3 sub-specs / 3 PRs
+📦 SPEC 09 — Part management
+   2 PRs · stacked: merge in order · base main
 
-09.1 Shared part rules                        PR 1 · branch spec09/1-part-rules ← base main
-     1. Delivery plan                         docs(spec): add delivery plan for SPEC 09
-     2. Code normalization                    feat(inventory): add part code normalization
-     3. Input validation                      feat(inventory): add part input validation
+  ┌─ PR 1 · 09.1 Shared part rules ───────────────────────────
+  │ 🎯 Every part code is validated the same way everywhere
+  │ ✅ Unit tests reject duplicate and malformed codes
+  │ 🧩 3 commits · branch spec09/1-part-rules ← main
+  └───────────────────────────────────────────────────────────
+        │
+        ▼  needs `normalizeCode`
+  ┌─ PR 2 · 09.2 Edit a part from its screen ─────────────────
+  │ 🎯 The team can update a single part and see the change
+  │ ✅ Edit a part, reload, the new data is there
+  │ 🧩 4 commits · branch spec09/2-edit-part ← spec09/1-part-rules
+  └───────────────────────────────────────────────────────────
 
-09.2 Part management Lambda                   PR 2 · branch spec09/2-gestion-pieza ← base spec09/1-part-rules
-     Depends on:    09.1 — needs `normalizeCode` from amplify/shared/part.ts (not in main yet)
-     1. Mutation handler                      feat(inventory): add gestion-pieza mutation handler
-     ...
+✂️  09.1 goes alone because the rules are a contract other screens consume.
+✔️  7 validations passed · 9/9 parent criteria covered
+
+💡 S1 Completeness bar  → goes in 09.2 · cost small
+   Shows how complete the part's data is while editing.
+   🎯 complete data · 📈 % of parts saved with all fields
 ```
 
 ## License
