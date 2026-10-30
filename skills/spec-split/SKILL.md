@@ -48,7 +48,7 @@ Talk to the user in the language they write in. Write the sub-specs in the **par
 4. **Never write before confirmation.** Phase 4 is the only phase that writes files, and only after the user approves the split in Phase 3.
 5. **Only new sub-specs and the authorized parent sections.** You create `specs/NN.k-slug.md` files and edit the parent spec only where Phase 4.2 says. Never code, configuration, or any file outside `specs/`. Never `git checkout`, `git commit`, `git push`, `git stash`, `git reset`, `git restore`, nor `gh`. Branch names and PR titles are proposals written in the sub-specs; `/spec-impl` and the author act on them.
 6. **Don't rewrite the parent spec.** You only add the delivery header line and the "Delivery in sub-specs" section. Its scope, decisions and criteria stay as they are.
-7. **Don't invent scope.** Everything in a sub-spec comes from the parent spec. If the split reveals something the parent does not cover (a missing migration, a missing test setup), ask; don't add it silently.
+7. **Don't invent scope.** Everything in a sub-spec comes from the parent spec. If the split reveals something the parent does not cover (a missing migration, a missing test setup), ask; don't add it silently. The only other additions are the optional suggestions of Phase 3.7, and only those the user explicitly accepts.
 8. **Every user decision is an `AskUserQuestion`.** Max 4 options; the recommended option goes first with ` (Recommended)` in its label.
 9. **Never overwrite, never delete.** Before writing a sub-spec, check its path does not exist; if it does, stop and ask. The only existing sub-specs you may change are `Draft` ones the user chose to re-plan (Phase 1), with `Edit`. Never remove or revert changes the user already made, committed or not.
 10. **The repository guard is mandatory** (next section). If it finds anything unexpected, stop and ask; do not try to fix it.
@@ -195,7 +195,7 @@ Each sub-spec must pass **all seven**, each with a one-line reason (not just a �
 4. **Repo not broken.** Merging it leaves the repo coherent: nothing half-wired is reachable by users, and the checks that apply pass.
 5. **Functional independence.** Does it deliver a useful result, or does it only prepare code that nothing can use yet? If it only prepares, it must meet the layer-split conditions in 3.1; otherwise merge it into the slice that uses it.
 6. **Justified dependencies.** Every dependency on another sub-spec is real and stated (3.4). If it can be integrated against the base branch, it must be.
-7. **Scope integrity.** Every requirement, constraint, business rule and decision of the parent that belongs here is kept; nothing is dropped, softened or added. A behavior that is not in the parent is invented: remove it, or ask (hard rule 7).
+7. **Scope integrity.** Every requirement, constraint, business rule and decision of the parent that belongs here is kept; nothing is dropped, softened or added. A behavior that is not in the parent is invented: remove it, or ask (hard rule 7). Exception: suggestions the user accepted in 3.7, marked "Approved during split".
 
 If a proposal fails any validation, fix it (merge, re-split, reorder, re-target) and re-validate **before** asking for approval. Never show a failing proposal hoping the user catches it.
 
@@ -312,7 +312,45 @@ Then a short note on any judgment call (why a piece went first, why two things s
 
 **Parent criteria coverage.** Every acceptance criterion of the parent spec appears in the matrix with a sub-spec, a step and a verification. If one doesn't, the split is incomplete: fix it before showing it.
 
-Ask with `AskUserQuestion`:
+### 3.7 Optional enhancement suggestions
+
+After the proposal, under the heading **"Optional suggestions (not in the parent spec)"**, offer **up to 4** ideas that would make the user-facing sub-specs more innovative, visually attractive or motivating, including gamification applied correctly in a business setting. They are **proposals only**: nothing enters a sub-spec unless the user accepts it.
+
+Skip this section (say "no suggestions: this spec has no user-facing behavior") when every sub-spec is backend, data or infrastructure only.
+
+**Where ideas come from.** Read the parent spec's objective, users and screens, and the project's existing UI (components, design system, styles) so every idea fits what is already there. Prefer ideas that reuse existing components over new libraries.
+
+**Business gamification, done right.** A gamification idea is acceptable only if all of these hold:
+
+- **Tied to a real business goal** of the parent spec (fewer errors, faster capture, complete data, fewer pending items), with a **metric** that shows whether it works.
+- **Rewards useful work**, not volume or clicks: quality, completeness, resolved items, streaks of correct work.
+- **Professional tone:** progress bars, completion percentages, milestones, status badges, checklists, clear positive feedback, team (not individual) goals. No cartoons, confetti on every action, or childish language.
+- **No harmful competition or exposure:** no public individual rankings, no shaming of low performers, no data about a person shown to others without a clear business need and the user's consent.
+- **No dark patterns:** no artificial urgency, no hiding actions behind rewards, no pressure to work longer. It never blocks or slows the real task.
+- **Accessible and optional:** works with keyboard and screen readers, meets color-contrast, respects reduced motion; can be ignored without losing functionality.
+
+**Visual and innovative ideas** follow the same rules: they serve the user's task (clearer status, fewer steps, better feedback, empty states that guide), not decoration.
+
+For each suggestion, show one block:
+
+```text
+S1 <name>                                     → NN.k (no new PR)
+   Idea:       <what the user sees and does>
+   Goal:       <parent objective or criterion it serves>
+   Metric:     <how to know it works, e.g. % of parts saved with complete data>
+   Cost:       small | medium  — <files/components it touches>
+   Guardrails: <which rules above it respects and how, e.g. "team progress only, no ranking">
+```
+
+Rules for suggestions:
+
+- They go **inside an existing sub-spec** (the slice whose screen they improve). Never create a new sub-spec or PR only for a suggestion, unless the user asks; this keeps the split small (3.1).
+- Only `small` or `medium` cost. A large idea is mentioned in one line as "for a future spec" and not offered.
+- Ask with `AskUserQuestion` (`multiSelect: true`, max 4 options, one per suggestion, the one with the best goal/cost ratio first with ` (Recommended)`). The user can pick none.
+- Every **accepted** suggestion becomes, in its sub-spec: a scope item marked "Approved during split: S<n> …", a step (or part of an existing step) with its commit and checks, an acceptance criterion with its metric, and tests. In the traceability matrix it gets its own row (`S1`, `S2`, …) marked "approved during split", not a parent criterion.
+- Rejected suggestions are not written anywhere.
+
+Then ask with `AskUserQuestion`:
 
 - **Write the sub-specs (Recommended)**
 - **Adjust the split** — then ask what to change (merge, split further, reorder, rename, move a step), apply it, re-run the checks and show the proposal again.
@@ -447,6 +485,9 @@ Edit the parent spec, without touching anything else:
 
 <"Stacked PRs: merge in order." when applicable.>
 
+<Only if suggestions were accepted in 3.7:>
+**Approved during split (not in the original scope):** S1 <name> → NN.k; S2 … → NN.j.
+
 ### Traceability
 
 | # | Criterion | Sub-spec | Step | Verified by |
@@ -491,6 +532,7 @@ Do not offer to implement, create branches or open PRs.
 - Is the spec free of ambiguities that affect the split?
 - Is the spec deliverable in one go? If not, split it by functionality, end to end first.
 - Is every cut important (risk, real prerequisite, independent value, switch-over)? Could two neighboring sub-specs be merged without losing that reason? Usually 1–3 sub-specs.
+- Did you offer up to 4 optional suggestions (visual, innovative, business gamification) tied to a goal and a metric, without dark patterns or public rankings, and write only the accepted ones?
 - Does every sub-spec pass the seven validations, each with a reason?
 - Is every dependency real, with exactly what it needs and why it can't target the base branch?
 - Do shared contracts follow add → use → remove?
