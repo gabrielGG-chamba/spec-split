@@ -2,7 +2,7 @@
 name: spec-split
 description: Split an approved spec into sub-specs where every sub-spec is one specific functionality delivered as one pull request, and every step of a sub-spec is one commit. Reads the spec and the project's conventions, proposes the split (sub-specs, steps, commit messages, PR titles, branches), asks for confirmation, then writes one `specs/NN.k-slug.md` per sub-spec and a delivery table in the parent spec. Never writes code, creates branches, commits or opens PRs. Use after `/spec` and before `/spec-impl`, when a spec is too big for a single PR, e.g. "/spec-split", "/spec-split 09", "/spec-split 09-part-management", "split this spec into PRs".
 argument-hint: "[NN | NN-slug | path to spec]"
-allowed-tools: Read, Glob, Grep, Write, Edit, AskUserQuestion, Bash(ls:*), Bash(cat:*), Bash(git log:*), Bash(git branch:*), Bash(git status:*), Bash(git diff:*)
+allowed-tools: Read, Glob, Grep, Write, Edit, AskUserQuestion, Bash(ls:*), Bash(git log:*), Bash(git branch:*), Bash(git status:*), Bash(git diff:*)
 ---
 
 # /spec-split — Split a spec into one PR per functionality
@@ -15,11 +15,11 @@ Specs in this repo:
 Recent commit style:
 !`git log --oneline -15 2>/dev/null || echo "Not a git repository"`
 
-Branches:
-!`git branch -a 2>/dev/null`
+Branches (30 most recent):
+!`git branch -a --sort=-committerdate 2>/dev/null | head -30`
 
 Working tree at start (baseline for the repository guard):
-!`git status --porcelain 2>/dev/null || echo "Not a git repository"`
+!`git status --porcelain -uall 2>/dev/null || echo "Not a git repository"`
 
 ---
 
@@ -50,14 +50,14 @@ Talk to the user in the language they write in. Write the sub-specs in the **par
 6. **Don't rewrite the parent spec.** You only add the delivery header line and the "Delivery in sub-specs" section. Its scope, decisions and criteria stay as they are.
 7. **Don't invent scope.** Everything in a sub-spec comes from the parent spec. If the split reveals something the parent does not cover (a missing migration, a missing test setup), ask; don't add it silently.
 8. **Every user decision is an `AskUserQuestion`.** Max 4 options; the recommended option goes first with ` (Recommended)` in its label.
-9. **Never overwrite, never delete.** Before writing a sub-spec, check its path does not exist; if it does, stop and ask. Never remove or revert changes the user already made, committed or not.
+9. **Never overwrite, never delete.** Before writing a sub-spec, check its path does not exist; if it does, stop and ask. The only existing sub-specs you may change are `Draft` ones the user chose to re-plan (Phase 1), with `Edit`. Never remove or revert changes the user already made, committed or not.
 10. **The repository guard is mandatory** (next section). If it finds anything unexpected, stop and ask; do not try to fix it.
 
 ---
 
 ## Repository guard
 
-**Before starting** (right after locating the spec in Phase 1), read the baseline in the session context (`git status --porcelain`):
+**Before starting** (right after locating the spec in Phase 1), read the baseline in the session context (`git status --porcelain -uall`, which lists every untracked file instead of collapsing new folders into one `?? dir/` line):
 
 - If the **parent spec** has uncommitted changes, or any path you are going to create already appears there, stop. Show the lines and ask the user to commit or stash them first. Never stash or revert yourself.
 - Other uncommitted changes (code, other specs) don't block you: list them to the user once ("these changes are yours and won't be touched") and leave them alone.
@@ -65,12 +65,12 @@ Talk to the user in the language they write in. Write the sub-specs in the **par
 
 **While writing** (Phase 4):
 
-- Before each `Write`, check the target path does not exist (`ls specs/<file>`). If it does, stop and ask.
-- The parent spec is the only existing file you edit, and only with `Edit` (never `Write`), only in the places Phase 4.2 allows.
+- Before each `Write`, check the target path does not exist (`Glob` on `specs/<file>`). If it does, stop and ask.
+- The parent spec is the only existing file you edit, and only with `Edit` (never `Write`), only in the places Phase 4.2 allows. Exception: when re-planning (Phase 1), the `Draft` sub-specs the user chose to re-plan, also only with `Edit`.
 
-**After writing**, run `git status --porcelain` and `git diff --stat` again and compare with the baseline:
+**After writing**, run `git status --porcelain -uall` and `git diff --stat` again and compare with the baseline:
 
-- New entries must be exactly the sub-spec files you created (`??`) and the parent spec (` M`).
+- New entries must be exactly the sub-spec files you created (`??`), the parent spec (` M`) and, when re-planning, the `Draft` sub-specs the user authorized (` M`).
 - `git diff -- <parent spec>` must contain only added lines: the header line and the "Delivery in sub-specs" section. No removed or changed lines. Only exception: when re-planning an already split spec (Phase 1), lines inside the existing "Delivery in sub-specs" section may change; show that diff to the user.
 - If anything else appears or changed (another file, a removed line, a file you did not create), stop: tell the user exactly what is different and ask how to proceed. Do not undo it yourself.
 
@@ -85,7 +85,13 @@ If it has a value: find the file in `specs/` by full name, number (`09`) or slug
 Run the "Before starting" part of the repository guard. Then read the spec and check:
 
 - **Status.** Continue only if it means "Approved" in any language (`Approved`, `Aprobado`, `aprobado`, `Aprovado`, …). If it is `Draft`/`In review`, say: "Approve the spec before splitting it: the split depends on its scope and decisions." and stop. If it is `Implemented`/`Obsolete`, say there is nothing to split and stop.
-- **Already split.** If the spec says it is a parent spec, has a "Delivery in sub-specs" section, or `specs/NN.1-*` already exists, show the existing sub-specs and ask whether to stop (recommended) or re-plan only the sub-specs not yet implemented. Never overwrite an existing sub-spec file.
+- **Shared number.** Several specs can share a number (`09-part-categorization.md` and `09-part-management.md`). A file `specs/NN.k-*.md` belongs to this spec only if its `Parent spec` header links to this spec's file name; never decide by number alone. If this spec has no sub-specs yet but `specs/NN.k-*` files of **another** spec exist, the new names would collide: say so and ask which numbering to use (e.g. continue after the last `NN.k`, or the parent's own convention).
+- **Already split.** If the spec says it is a parent spec, has a "Delivery in sub-specs" section, or sub-specs whose `Parent spec` links to it exist, show them with their status and ask:
+  - **Stop (Recommended)** — write nothing.
+  - **Add sub-specs** — keep every existing sub-spec as is and only add new ones after the last number (`NN.(n+1)`, …).
+  - **Re-plan Draft sub-specs** — only when some sub-specs are still `Draft` (not approved, not implemented). Name each one you would change; they are edited with `Edit` (never `Write`) and the user sees the diff before the guard runs. Approved, in-progress or implemented sub-specs are never touched.
+
+  Never overwrite or delete an existing sub-spec file.
 
 ## Phase 2 — Learn the project and validate the spec
 
@@ -110,7 +116,7 @@ Read, in this order, stopping when you have enough:
 | Commit message | `git log` (type, scope, language, mood: "add" vs "adds" vs "added"). |
 | PR title | Merge commits in `git log` (`Merge pull request #N from …/<branch>`) and their branch names; recent commit subjects if there are no merges. |
 
-If there is no real example for a name, say so in the proposal ("no branch convention found; using `specNN/k-slug`") instead of presenting the default as the repo's convention.
+If there is no real example for a name, say so in the proposal ("no branch convention found; using `specNN/k-slug`") instead of presenting the default as the repo's convention. Git cannot hold both a branch `specNN` and branches `specNN/…`: if `git branch -a` shows a branch named exactly like the prefix, use `specNN-k-slug` instead.
 
 Never run commands beyond those in `allowed-tools`. Never read secrets or `.env` files.
 
@@ -173,7 +179,7 @@ If the spec is small enough for one PR, say so and propose a single sub-spec —
 
 Each sub-spec must pass **all seven**, each with a one-line reason (not just a ✓):
 
-1. **One sentence.** It is described in one sentence without "and"/"y".
+1. **One sentence.** It is described in one sentence with no conjunction joining two actions ("and", "y", "e", …, in any language).
 2. **Verifiable result.** Someone else can verify it (a test, a screen, a query, a command). Name it.
 3. **Reviewable alone.** It can be reviewed without reading the other sub-specs.
 4. **Repo not broken.** Merging it leaves the repo coherent: nothing half-wired is reachable by users, and the checks that apply pass.
@@ -194,10 +200,12 @@ And every PR must avoid the "split it" signals:
 
 ### 3.3 Break each sub-spec into steps
 
-- Step 1 is always the sub-spec itself: `docs(spec): add sub-spec NN.k for <functionality>` (in the repo's commit style and language). The reviewer reads the plan first.
+- **The delivery plan is committed once, in PR 1.** Step 1 of NN.1 commits the parent spec edits **and every sub-spec file** together: `docs(spec): add delivery plan for SPEC NN` (in the repo's commit style and language). That way the delivery table never links to files missing from the base branch, and no sub-spec stays untracked while the author switches branches. The reviewer of PR 1 reads the whole plan first. If independent PRs will start before PR 1 is merged (their sub-spec would not be in the base yet), propose instead a docs-only PR that only carries the delivery plan, merged before the others, and say why.
+- Sub-specs NN.2 … NN.n have **no docs step**: their file is already in the base (or in the stacked branch) when their PR starts. If an earlier review changed the plan, their step 1 is `docs(spec): update sub-spec NN.k …` with only those changes.
+- When re-planning adds sub-specs to an already delivered spec (Phase 1), the first new sub-spec's step 1 commits the new files and the parent's changes the same way.
 - Each following step is one small, verifiable change that leaves the repo in a **coherent state**. Its tests go **in the same commit** unless the project's conventions say otherwise.
 - **Checks per step.** Each step lists the checks that apply to it, chosen from the project's real commands (2.1): build/typecheck, lint, unit tests, integration/service tests, manual check. Not every check runs on every commit:
-  - A docs-only step (the sub-spec) needs none.
+  - A docs-only step (the delivery plan) needs none.
   - A pure-logic step: typecheck + lint + its unit tests.
   - A step that changes a shared API or contract in several places: it may be split into add-new → migrate-callers → remove-old so each commit still typechecks; if that is impossible, say which check is expected to fail in that commit and which next step restores it. That is the only allowed exception, and it is written in the step.
   - Integration/service tests go on the step that wires things to real services, and on the last step of the sub-spec.
@@ -268,12 +276,13 @@ NN.1 <functionality>                         PR 1 · branch specNN/1-slug ← ba
      Depends on:    none
      Risks:         <what can go wrong in this PR>
      Criteria:      C1, C3a
-     1. Sub-spec                             docs(spec): add sub-spec NN.1 for …      checks: —
+     1. Delivery plan                        docs(spec): add delivery plan for SPEC NN  checks: —
      2. <step>                               feat(scope): …                           checks: typecheck, lint, unit
      3. <step>                               test(scope): …                           checks: all
 
 NN.2 <functionality>                         PR 2 · branch specNN/2-slug ← base specNN/1-slug
      Depends on:    NN.1 — needs `normalizeCode` from amplify/shared/part.ts (not in main yet)
+     1. <step>                               feat(scope): …                           checks: typecheck, lint, unit
      ...
 
 Open points in the parent spec: <from 2.2, or "none">
@@ -357,8 +366,9 @@ Base branch `<base>` because <reason: independent, or the dependency above>.
 
 Every step is one commit, with its tests in the same commit. Every commit leaves the repo coherent and passes the checks listed for it; the last step passes all of `<project checks>`. If a step that was not planned appears during implementation, add it here and close it with its own commit.
 
-1. **Sub-spec.** This file.
-   - Commit: `docs(spec): add sub-spec NN.k for <functionality>`
+<Only in NN.1 (or the docs-only plan PR):>
+1. **Delivery plan.** The parent spec's delivery section and every sub-spec file of SPEC NN.
+   - Commit: `docs(spec): add delivery plan for SPEC NN`
    - Checks: none (docs only).
 2. **<Step title>.** <What changes, which files, which tests.>
    - Commit: `<type(scope): message>`
@@ -413,7 +423,7 @@ Omit **Previous** / **Next** when they don't exist. Mark `Status` as `Draft` (or
 Edit the parent spec, without touching anything else:
 
 1. Add a header line after the existing ones (same labels language): `> **Type:** parent spec. Delivered in n sub-specs, one per PR (see "Delivery in sub-specs").`
-2. Add this section at the end (or before the risks section, if the existing parent specs in the repo do so):
+2. Add this section at the end (or before the risks section, if the existing parent specs in the repo do so). If other parent specs in the repo already have a delivery section, copy their heading, columns and intro paragraph instead of this template; keep at least the sub-spec link, PR number, branch and base.
 
 ```markdown
 ---
@@ -442,7 +452,7 @@ Re-read every file you wrote and the parent spec, and check:
 - **Numbering.** Sub-specs are `NN.1 … NN.n` with no gaps; every header says `PR k of n` with the same `n`.
 - **Branches.** Each sub-spec's base matches its Dependencies section and the delivery table; a stacked PR's base is the branch of the PR it depends on.
 - **Criteria.** Every row of the traceability matrix appears in the acceptance criteria of the sub-spec it names, and every parent criterion has a row.
-- **Steps.** Every step has exactly one commit message and its checks; the last step of every sub-spec runs all checks.
+- **Steps.** Every step has exactly one commit message and its checks; the last step of every sub-spec runs all checks; only NN.1 (or the docs-only plan PR) has the delivery-plan step.
 - **Parent intact.** The parent spec changed only by the header line and the "Delivery in sub-specs" section (the repository guard confirms this with `git diff`).
 
 If anything fails, fix it in the files you created (never in other files) and re-check. If the fix would need changing the parent beyond the authorized places, stop and ask.
@@ -457,6 +467,7 @@ Tell the user, and stop:
 
 - The files created and the parent spec edited, with the coherence check and repository guard results ("links, numbering, branches and criteria verified; only these files changed").
 - The sub-specs are `Draft`: re-read and approve each one, then run `/spec-impl NN.1` (and so on, in order).
+- The parent spec and **all** sub-spec files are committed together in step 1 of NN.1 (`docs(spec): add delivery plan for SPEC NN`), not one per PR.
 - If PRs are stacked: merge them in order and retarget the next PR's base after each merge.
 - Reminder: send the heads-up to the reviewer before opening each PR.
 
