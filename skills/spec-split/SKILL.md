@@ -42,7 +42,7 @@ Talk to the user in the language they write in. Write the sub-specs in the **par
 
 ## Hard rules
 
-1. **Split by functionality, end to end first.** Never by file, by hours, or by layer as a default. A piece is a functionality when it can be described in one sentence and has a result someone can verify. A layer split is allowed only when each piece justifies itself (Phase 3.1).
+1. **Split by functionality, end to end first.** Never by file, by hours, or by layer as a default. A piece is a functionality when it can be described in one sentence and has a result someone can verify. A layer split is allowed only when each piece justifies itself (Phase 3.1). **Few cuts:** start from one PR and cut only where it matters (risk, real prerequisite, independent value, switch-over); usually 1–3 sub-specs.
 2. **Every sub-spec passes the seven validations** (Phase 3.2). If one fails, fix the split before showing it. Ticking boxes is not enough: each validation needs a one-line reason.
 3. **One step = one commit.** Every step has exactly one commit message. No step says "and also…"; if it does, it is two steps.
 4. **Never write before confirmation.** Phase 4 is the only phase that writes files, and only after the user approves the split in Phase 3.
@@ -145,6 +145,16 @@ Never resolve an ambiguity by guessing. If the answers change the spec's scope, 
 
 Go through the spec's scope, data model, implementation plan and acceptance criteria and group them into functionalities.
 
+**Few cuts, only where they matter.** Start from **one PR** and add a cut only when it pays for itself. Every PR costs a branch, a review, a merge and, if stacked, rebases; a split with many small PRs is worse than a few solid ones.
+
+- A cut is **important** when at least one of these holds:
+  - **Risk isolation:** a hard or risky change (data migration, backfill, concurrency, permissions, a breaking contract) that should be reviewed, deployed or reverted on its own.
+  - **Real prerequisite:** something that must be merged or deployed before the rest (a schema/contract other parts consume, a migration that must run first).
+  - **Independent value:** a functionality that is useful by itself and unrelated to the rest (a different screen or flow, a different user).
+  - **Switch-over:** removing or switching an old path, which must wait until the new one exists.
+- Everything else **stays together**: small pieces, pieces of the same area or flow, UI with its own backend, helpers with their only consumer, tests, polish, config, docs. "It could be its own PR" is not a reason; "it must be its own PR because …" is.
+- **Typical result: 1–3 sub-specs.** More than 3 needs a written reason for every extra cut in the proposal. Before showing the proposal, try to merge each pair of neighboring sub-specs; keep them apart only if the merge loses one of the reasons above.
+
 **Start from end-to-end slices.** The first question is: which behaviors can a user (or a calling system) observe, and can each one be delivered through every layer it needs in one PR? A slice like "update a single part from the edit screen" (UI + service + backend for that one behavior) is preferred over "all the UI", "all the services", "all the backend".
 
 **Split by layer only when it is justified.** A layer piece (e.g. a backend capability before its UI) is acceptable only if all of these hold, and you write the reason in the proposal:
@@ -161,11 +171,11 @@ Other useful questions:
 - Which change **removes** or **switches** something? (Retiring old permissions, switching the UI to the new path.) It goes after the new path exists.
 - What can be **left out** of the first PRs without breaking anything? Prefer additive PRs first, the switch-over last.
 
-**Size is not a reason by itself.** Don't split because a PR "looks big". Judge each candidate PR by:
+**Size is not a reason by itself.** Don't split because a PR "looks big". A candidate cut must match one of the important reasons above; these factors help you check it:
 
 | Factor | Split when… |
 | --- | --- |
-| Behaviors | It delivers more than one behavior a reviewer must reason about separately. |
+| Behaviors | It delivers unrelated behaviors (different flows or screens) a reviewer must reason about separately. Related behaviors of one flow stay together. |
 | Complexity | It mixes a hard change (concurrency, data migration, permissions) with routine ones. |
 | Risk | A failure in one part would force reverting unrelated parts. |
 | Review difficulty | The reviewer needs to hold several contexts at once to approve it. |
@@ -296,7 +306,7 @@ Below it, a validation table, one line of reason per cell:
 
 Below it, the traceability matrix (3.5), including decomposed and cross-cutting criteria.
 
-Then a short note on any judgment call (why a piece went first, why two things stayed together).
+Then a short note on any judgment call (why a piece went first, why two things stayed together). For **every cut**, one line: "NN.k is separate from NN.(k+1) because <important reason from 3.1>". A cut without a reason is merged before showing the proposal.
 
 **Base branch.** For every PR, show its base. For every stacked PR, show what it needs from the earlier PR and why (3.4). Note that stacked PRs must be merged in order.
 
@@ -480,6 +490,7 @@ Do not offer to implement, create branches or open PRs.
 - Is the working tree safe to write in (parent spec without uncommitted changes)?
 - Is the spec free of ambiguities that affect the split?
 - Is the spec deliverable in one go? If not, split it by functionality, end to end first.
+- Is every cut important (risk, real prerequisite, independent value, switch-over)? Could two neighboring sub-specs be merged without losing that reason? Usually 1–3 sub-specs.
 - Does every sub-spec pass the seven validations, each with a reason?
 - Is every dependency real, with exactly what it needs and why it can't target the base branch?
 - Do shared contracts follow add → use → remove?
